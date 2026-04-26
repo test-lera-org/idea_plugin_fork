@@ -1,0 +1,6 @@
+<root>
+    <nodeA id="id1" title="title1">
+        <nodeB id="id2" title="title2">abc</nodeB>
+    </nodeA>
+    <nodeRef id="id3" title="title3" src="test1.xml">abcde</nodeRef>
+</root>

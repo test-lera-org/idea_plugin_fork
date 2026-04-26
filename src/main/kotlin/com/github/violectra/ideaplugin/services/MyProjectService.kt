@@ -14,15 +14,17 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.*
 import com.intellij.psi.xml.*
+import com.intellij.util.LocalFileUrl
 import com.intellij.util.xml.DomElement
 import com.intellij.util.xml.DomManager
-import java.nio.file.Path
+import io.ktor.http.*
 import javax.swing.tree.DefaultMutableTreeNode
 
 
 @Service(Service.Level.PROJECT)
 class MyProjectService(private val project: Project) : Disposable {
 
+    var treeRoot: DefaultMutableTreeNode? = null
     private lateinit var rootFile: PsiFile
     private val treeNodesByDomNodes = HashMap<MyNode, DefaultMutableTreeNode>()
 
@@ -98,36 +100,38 @@ class MyProjectService(private val project: Project) : Disposable {
     }
 
     private fun reloadTreeWithNewRoot(root: DefaultMutableTreeNode?) {
-
+        treeRoot = root
         project.messageBus.syncPublisher(ReloadTreeListener.RELOAD_MY_TREE_TOPIC).handleTreeReloading(root)
     }
 
     private fun readDomStructureTreeNode(file: PsiFile): DefaultMutableTreeNode? {
-        val parentFilePath = file.virtualFile.toNioPath().parent
+        val parentFilePath = file.virtualFile.parent.url
         return getDomRoot(file)
             ?.let { convertToTreeNode(it, parentFilePath, setOf(file.name)) }
     }
 
-    private fun findPsiFileByPath(path: Path): PsiFile? {
-        return VirtualFileManager.getInstance().findFileByNioPath(path)
+    private fun findPsiFileByUrl(url: String): PsiFile? {
+        return VirtualFileManager.getInstance().findFileByUrl(url)
             ?.let { PsiManager.getInstance(project).findFile(it) }
     }
 
     private fun getDomRoot(
         file: PsiFile,
     ) = if (file is XmlFile) {
-        DomManager.getDomManager(project).getFileElement(file, Root::class.java)?.rootElement
+        val fileElement = DomManager.getDomManager(project).getFileElement(file, Root::class.java)
+        if (fileElement != null && fileElement.isValid) fileElement.rootElement else null
     } else null
 
     private fun convertToTreeNode(
         node: MyNode,
-        parentFilePath: Path,
+        parentFileUrl: String,
         usedSrc: Set<String>,
     ): DefaultMutableTreeNode {
+
         val newNode = if (node is NodeRef) {
             node.getSrc().value
-                ?.let { parentFilePath.resolve(it) }
-                ?.let { findPsiFileByPath(it) }
+                ?.let { LocalFileUrl(parentFileUrl).resolve(it).toString() }
+                ?.let { findPsiFileByUrl(it) }
                 ?.takeIf { it.name !in usedSrc }
                 ?.let { getDomRoot(it) }
                 ?.let { root -> RootWithExternalRef(root, node) } ?: node
@@ -141,7 +145,7 @@ class MyProjectService(private val project: Project) : Disposable {
         } else usedSrc
         if (newNode is MyNodeWithChildren) {
             for (child in newNode.getSubNodes()) {
-                treeNode.add(convertToTreeNode(child, parentFilePath, updatedUsedSrc))
+                treeNode.add(convertToTreeNode(child, parentFileUrl, updatedUsedSrc))
             }
         }
         treeNodesByDomNodes[node] = treeNode
@@ -152,8 +156,8 @@ class MyProjectService(private val project: Project) : Disposable {
     private fun convertToTreeNodes(child: DomElement): DefaultMutableTreeNode {
         val node = child as MyNode
         val userSrc = calculateUsedSrcForNode(node)
-        val parentPath = rootFile.virtualFile.toNioPath().parent
-        return convertToTreeNode(node, parentPath!!, userSrc)
+        val parentUrl = rootFile.virtualFile.parent.url
+        return convertToTreeNode(node, parentUrl, userSrc)
     }
 
     private fun calculateUsedSrcForNode(child: MyNode): Set<String> {

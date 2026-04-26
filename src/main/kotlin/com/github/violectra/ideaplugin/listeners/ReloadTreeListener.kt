@@ -1,6 +1,7 @@
 package com.github.violectra.ideaplugin.listeners
 
 import com.intellij.util.messages.Topic
+import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.MutableTreeNode
 import javax.swing.tree.TreeNode
 
@@ -11,8 +12,7 @@ interface ReloadTreeListener {
     }
 
     fun handleTreeReloading(root: TreeNode?)
-    fun substituteTreeNode(oldNode: MutableTreeNode, newNode: MutableTreeNode)
-
-    fun addTreeNode(parent: MutableTreeNode, newNode: MutableTreeNode, index: Int)
+    fun substituteTreeNode(oldNode: MutableTreeNode, newNode: DefaultMutableTreeNode)
+    fun addTreeNode(parent: MutableTreeNode, newNode: DefaultMutableTreeNode, index: Int)
     fun reloadTree()
 }

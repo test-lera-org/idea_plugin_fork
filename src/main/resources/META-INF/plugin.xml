@@ -7,7 +7,6 @@
     <depends>com.intellij.modules.platform</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
-<!--<extensionPoint name="typedHandler" interface="com.intellij.codeInsight.editorActions.TypedHandlerDelegate" dynamic="true"/>-->
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.github.violectra.ideaplugin.toolWindow.MyToolWindowFactory" id="MyToolWindow" anchor="right"/>

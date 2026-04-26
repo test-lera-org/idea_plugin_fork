@@ -1,0 +1,3 @@
+<root>
+    <nodeRef id="id1" title="title1" src="test3.xml">abcde</nodeRef>
+</root>

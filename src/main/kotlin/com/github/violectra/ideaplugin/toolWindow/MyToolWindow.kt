@@ -11,15 +11,13 @@ import com.intellij.ui.*
 import com.intellij.ui.RowsDnDSupport.RefinedDropSupport.Position
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.EditableModel
+import com.intellij.util.ui.tree.TreeUtil
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTree
-import javax.swing.tree.DefaultMutableTreeNode
-import javax.swing.tree.DefaultTreeModel
-import javax.swing.tree.MutableTreeNode
-import javax.swing.tree.TreeNode
+import javax.swing.tree.*
 
 class MyToolWindow(private val project: Project) : JPanel(BorderLayout()), Disposable {
 
@@ -46,21 +44,26 @@ class MyToolWindow(private val project: Project) : JPanel(BorderLayout()), Dispo
             object : ReloadTreeListener {
                 override fun handleTreeReloading(root: TreeNode?) {
                     treeModel.setRoot(root)
+                    tree.expandRow(0)
                 }
 
-                override fun substituteTreeNode(oldNode: MutableTreeNode, newNode: MutableTreeNode) {
+                override fun substituteTreeNode(oldNode: MutableTreeNode, newNode: DefaultMutableTreeNode) {
                     val parent = oldNode.parent as MutableTreeNode
                     val index = oldNode.parent.getIndex(oldNode)
                     treeModel.removeNodeFromParent(oldNode)
                     treeModel.insertNodeInto(newNode, parent, index)
+                    tree.expandPath(TreePath(newNode.path))
                 }
 
-                override fun addTreeNode(parent: MutableTreeNode, newNode: MutableTreeNode, index: Int) {
+                override fun addTreeNode(parent: MutableTreeNode, newNode: DefaultMutableTreeNode, index: Int) {
                     treeModel.insertNodeInto(newNode, parent, index)
+                    tree.expandPath(TreePath(newNode.path))
                 }
 
                 override fun reloadTree() {
+                    val paths = TreeUtil.collectExpandedPaths(tree)
                     treeModel.reload()
+                    TreeUtil.restoreExpandedPaths(tree, paths)
                 }
             })
     }
